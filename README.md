@@ -4,6 +4,10 @@ Board game demo for Google Cloud Next 2025
 
 ## Backend
 
+```sh
+cd backend
+```
+
 To build the backend container:
 
 ```sh
