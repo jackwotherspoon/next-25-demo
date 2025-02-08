@@ -43,3 +43,12 @@ async def get_time(request: Request):
     async with request.app.state.pool.acquire() as conn:
         time = await conn.fetchrow("SELECT NOW()")
     return str(time[0])
+
+
+@app.get("/game")
+async def new_game(request: Request, theme: str = "regular"):
+    async with request.app.state.pool.acquire() as conn:
+        rows = await conn.fetch(
+            f'SELECT "word" FROM "{theme}" ORDER BY RANDOM() LIMIT 25;'
+        )
+    return [row["word"] for row in rows]
