@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 
+# TODO: use an async client like aiohttp
 def thesaurus_tool(word: str) -> list[str]:
     """Tool to look for synonyms of a given word.
 
