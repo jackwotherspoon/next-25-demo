@@ -18,6 +18,7 @@ import asyncpg
 from fastapi import FastAPI, Request
 
 from .database import init_db_pool
+from .tools import thesaurus_tool
 
 
 @asynccontextmanager
@@ -52,3 +53,8 @@ async def new_game(request: Request, theme: str = "regular"):
             f'SELECT "word" FROM "{theme}" ORDER BY RANDOM() LIMIT 25;'
         )
     return [row["word"] for row in rows]
+
+
+@app.get("/thesaurus")
+async def get_synonyms(word: str):
+    return thesaurus_tool(word)
