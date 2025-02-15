@@ -18,6 +18,7 @@ import asyncpg
 from fastapi import FastAPI, Request
 
 from .database import init_db_pool
+from .models import Game
 from .tools import thesaurus_tool
 
 
@@ -46,8 +47,14 @@ async def get_time(request: Request):
     return str(time[0])
 
 
-@app.get("/game")
+@app.post("/game")
 async def new_game(request: Request, theme: str = "regular"):
+    game = await Game.create(request.app.state.pool, theme)
+    return {"game_id": game.id, "words": game.words, "tiles": game.tiles}
+
+
+@app.get("/game")
+async def get_game(request: Request, theme: str = "regular"):
     async with request.app.state.pool.acquire() as conn:
         rows = await conn.fetch(
             f'SELECT "word" FROM "{theme}" ORDER BY RANDOM() LIMIT 25;'

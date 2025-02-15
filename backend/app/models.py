@@ -14,15 +14,59 @@
 
 import uuid
 
+import asyncpg
+from pydantic import BaseModel
+
 
 class Tile:
     """Class for individual game tile."""
 
     id: uuid.UUID  # tile id
-    game_id: uuid.UUID  # game id for game tile belongs to
     word: str  # word on the tile
     color: str  # color of the tile
     guessed: bool  # True if tile has been guessed, False otherwise
+
+    def __init__(self, word: str, color: str):
+        self.id: uuid.UUID = uuid.uuid4()
+        self.word = word
+        self.color = color
+        self.guessed = False
+
+
+def generate_tiles(words: list[str]) -> dict[str, Tile]:
+    """Generate tiles for game board.
+
+    Assign each word an ID, a color, and set guessed to False.
+    """
+    tiles = dict()
+    # verify 25 words were passed
+    if len(words) != 25:
+        raise ValueError(f"Expected 'words' to have a length of 25, got {len(words)}!")
+
+    # 9 words for orange team
+    orange = words[:9]
+    # generate tiles for orange team
+    for word in orange:
+        tiles[word] = Tile(word, "orange")
+
+    # 8 words for green team
+    green = words[9:17]
+    # generate tiles for green team
+    for word in green:
+        tiles[word] = Tile(word, "green")
+
+    # 7 neutral words (beige)
+    beige = words[17:24]
+    # generate neutral tiles
+    for word in beige:
+        tiles[word] = Tile(word, "beige")
+
+    # 1 "game ending" word (red)
+    red = words[-1]
+    # generate single "game ending" tile
+    tiles[red] = Tile(red, "red")
+
+    return tiles
 
 
 class Game:
@@ -30,4 +74,16 @@ class Game:
 
     id: uuid.UUID  # game id
     words: list[str]  # words for game board
-    word_mappings: dict[str, Tile]  # word --> tile info
+    tiles: dict[str, Tile]  # word --> tile info
+
+    @classmethod
+    async def create(cls, pool: asyncpg.Pool, theme: str):
+        self = cls()
+        self.id = uuid.uuid4()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                f'SELECT "word" FROM "{theme}" ORDER BY RANDOM() LIMIT 25;'
+            )
+            self.words = [row["word"] for row in rows]
+        self.tiles = generate_tiles(self.words)
+        return self
