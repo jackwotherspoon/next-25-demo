@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 
 import asyncpg
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from .database import init_db_pool
 from .models import Game
@@ -33,6 +34,21 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+origins = [
+    "https://storied-gelato-660ed7.netlify.app",
+    "https://frontend-service-670180168258.us-central1.run.app",
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
