@@ -63,17 +63,16 @@ def generate_tiles(words: list[str]) -> dict[str, Tile]:
     return tiles
 
 
-class Game:
+class Game(BaseModel):
     """Class for game board."""
 
-    id: uuid.UUID  # game id
-    words: list[str]  # words for game board
-    tiles: dict[str, Tile]  # word --> tile info
+    id: uuid.UUID = uuid.uuid4()  # game id
+    words: list[str] = []  # words for game board
+    tiles: dict[str, Tile] = {}  # word --> tile info
 
     @classmethod
     async def create(cls, pool: asyncpg.Pool, theme: str):
         self = cls()
-        self.id = uuid.uuid4()
         async with pool.acquire() as conn:
             rows = await conn.fetch(
                 f'SELECT "word" FROM "{theme}" ORDER BY RANDOM() LIMIT 25;'
