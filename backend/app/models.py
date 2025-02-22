@@ -18,19 +18,13 @@ import asyncpg
 from pydantic import BaseModel
 
 
-class Tile:
+class Tile(BaseModel):
     """Class for individual game tile."""
 
-    id: uuid.UUID  # tile id
+    id: uuid.UUID = uuid.uuid4()  # tile id
+    guessed: bool = False  # True if tile has been guessed, False otherwise
     word: str  # word on the tile
     color: str  # color of the tile
-    guessed: bool  # True if tile has been guessed, False otherwise
-
-    def __init__(self, word: str, color: str):
-        self.id: uuid.UUID = uuid.uuid4()
-        self.word = word
-        self.color = color
-        self.guessed = False
 
 
 def generate_tiles(words: list[str]) -> dict[str, Tile]:
@@ -47,24 +41,24 @@ def generate_tiles(words: list[str]) -> dict[str, Tile]:
     orange = words[:9]
     # generate tiles for orange team
     for word in orange:
-        tiles[word] = Tile(word, "orange")
+        tiles[word] = Tile(word=word, color="orange")
 
     # 8 words for green team
     green = words[9:17]
     # generate tiles for green team
     for word in green:
-        tiles[word] = Tile(word, "green")
+        tiles[word] = Tile(word=word, color="green")
 
     # 7 neutral words (beige)
     beige = words[17:24]
     # generate neutral tiles
     for word in beige:
-        tiles[word] = Tile(word, "beige")
+        tiles[word] = Tile(word=word, color="beige")
 
     # 1 "game ending" word (red)
     red = words[-1]
     # generate single "game ending" tile
-    tiles[red] = Tile(red, "red")
+    tiles[red] = Tile(word=red, color="red")
 
     return tiles
 
