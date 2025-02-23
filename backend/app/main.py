@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from contextlib import asynccontextmanager
 
 import asyncpg
@@ -21,6 +22,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import init_db_pool
 from .models import Game
 from .tools import thesaurus_tool
+
+# turn on logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 @asynccontextmanager
