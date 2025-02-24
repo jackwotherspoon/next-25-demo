@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 def init_cache() -> redis.Redis:
     client = redis.Redis(
-        host=os.environ["REDIS_HOST"],
-        port=os.environ["REDIS_PORT"],
+        host=os.environ["REDISHOST"],
+        port=os.environ["REDISPORT"],
     )
     logger.debug("Successfully initialized Redis client!")
     return client
