@@ -84,15 +84,6 @@ async def new_game(request: Request, theme: str = "regular"):
     return {"game_id": game.id, "words": game.words, "tiles": game.tiles}
 
 
-@app.get("/game")
-async def get_game(request: Request, theme: str = "regular"):
-    async with request.app.state.pool.acquire() as conn:
-        rows = await conn.fetch(
-            f'SELECT "word" FROM "{theme}" ORDER BY RANDOM() LIMIT 25;'
-        )
-    return [row["word"] for row in rows]
-
-
 @app.get("/game/{game_id}")
 async def get_game_by_id(request: Request, game_id: uuid.UUID):
     game_data = await request.app.state.cache.get(f"game:{game_id}")
