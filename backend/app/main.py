@@ -98,7 +98,21 @@ async def get_game_by_id(request: Request, game_id: uuid.UUID):
     game_data = await request.app.state.cache.get(f"game:{game_id}")
     if game_data:
         game = Game.model_validate_json(game_data)
+        logger.debug(f"Retrieved Game with ID, {game_id} from cache.")
         return {"game_id": game.id, "words": game.words, "tiles": game.tiles}
+    else:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+
+@app.delete("/game/{game_id}")
+async def delete_game(request: Request, game_id: uuid.UUID):
+    # check that game is in cache
+    game_data = await request.app.state.cache.get(f"game:{game_id}")
+    if game_data:
+        # delete game from cache
+        await request.app.state.cache.delete(f"game:{game_id}")
+        logger.debug(f"Deleted Game with ID, {game_id} from cache.")
+        return {"detail": "Successfully deleted Game."}
     else:
         raise HTTPException(status_code=404, detail="Game not found")
 
