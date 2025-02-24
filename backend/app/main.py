@@ -73,13 +73,6 @@ async def root():
     return {"message": "Hello World"}
 
 
-@app.get("/time")
-async def get_time(request: Request):
-    async with request.app.state.pool.acquire() as conn:
-        time = await conn.fetchrow("SELECT NOW()")
-    return str(time[0])
-
-
 @app.post("/game")
 async def new_game(request: Request, theme: str = "regular"):
     game = await Game.create(request.app.state.pool, theme)
