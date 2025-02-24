@@ -13,11 +13,12 @@
 # limitations under the License.
 
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
 import asyncpg
 import redis.asyncio as redis
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .cache import init_cache
@@ -28,6 +29,9 @@ from .tools import thesaurus_tool
 # turn on logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# default cache expiry is 1 hour
+CACHE_TIMEOUT_SECONDS = 3600
 
 
 @asynccontextmanager
@@ -79,6 +83,11 @@ async def get_time(request: Request):
 @app.post("/game")
 async def new_game(request: Request, theme: str = "regular"):
     game = await Game.create(request.app.state.pool, theme)
+    # add game to Redis cache
+    await request.app.state.cache.set(
+        f"game:{game.id}", game.model_dump_json(), ex=CACHE_TIMEOUT_SECONDS
+    )
+    logger.debug(f"Caching game with ID, {game.id}")
     return {"game_id": game.id, "words": game.words, "tiles": game.tiles}
 
 
@@ -89,6 +98,16 @@ async def get_game(request: Request, theme: str = "regular"):
             f'SELECT "word" FROM "{theme}" ORDER BY RANDOM() LIMIT 25;'
         )
     return [row["word"] for row in rows]
+
+
+@app.get("/game/{game_id}")
+async def get_game_by_id(request: Request, game_id: uuid.UUID):
+    game_data = await request.app.state.cache.get(f"game:{game_id}")
+    if game_data:
+        game = Game.model_validate_json(game_data)
+        return {"game_id": game.id, "words": game.words, "tiles": game.tiles}
+    else:
+        raise HTTPException(status_code=404, detail="Game not found")
 
 
 @app.get("/thesaurus")
