@@ -16,9 +16,11 @@ import logging
 from contextlib import asynccontextmanager
 
 import asyncpg
+import redis.asyncio as redis
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from .cache import init_cache
 from .database import init_db_pool
 from .models import Game
 from .tools import thesaurus_tool
@@ -30,9 +32,15 @@ logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # setup Postgres connection pool
     connector, pool = await init_db_pool()
     app.state.pool: asyncpg.Pool = pool
+    # setup Redis cache
+    cache = init_cache()
+    app.state.cache: redis.Redis = cache
     yield
+    # gracefully close Redis client
+    await cache.close()
     # gracefully close pool and connector on app close
     await pool.close()
     await connector.close_async()
