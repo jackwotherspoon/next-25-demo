@@ -84,6 +84,28 @@ async def new_game(request: Request, theme: str = "regular"):
     return {"game_id": game.id, "words": game.words, "tiles": game.tiles}
 
 
+@app.patch("/game/{game_id}")
+async def update_game(request: Request, game_id: uuid.UUID, game: Game):
+    game_data = await request.app.state.cache.get(f"game:{game_id}")
+    if game_data:
+        stored_game = Game.model_validate_json(game_data)
+        logger.debug(f"Retrieved Game with ID, {game_id} from cache.")
+        update_data = game.dict(exclude_unset=True)
+        updated_game = stored_game.copy(update=update_data)
+        # update game in Redis cache
+        await request.app.state.cache.set(
+            f"game:{game_id}", updated_game.model_dump_json(), ex=CACHE_TIMEOUT_SECONDS
+        )
+        logger.debug(f"Cache updated for game with ID, {game_id}")
+        return {
+            "game_id": updated_game.id,
+            "words": updated_game.words,
+            "tiles": updated_game.tiles,
+        }
+    else:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+
 @app.get("/game/{game_id}")
 async def get_game_by_id(request: Request, game_id: uuid.UUID):
     game_data = await request.app.state.cache.get(f"game:{game_id}")
