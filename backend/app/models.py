@@ -97,3 +97,24 @@ class Game(BaseModel):
             self.words = [row["word"] for row in rows]
         self.tiles = generate_tiles(self.words)
         return self
+
+    def guess_tile(self, guess: Guess) -> tuple[bool, str]:
+        """Guess a tile from game board.
+
+        Args:
+            guess (Guess): The guess, contains team making guess and word being
+                guessed.
+
+        Returns:
+            tuple[bool, str]: Tuple with boolean for if team guessed correctly
+                and string for color of tile guessed. (to know if death tile was
+                guessed)
+        """
+        # save guess to game state
+        self.guesses.append(guess)
+        # update guessed tile
+        tile = self.tiles[guess.word.upper()]
+        tile.guessed = True
+        # check if team guessing was correct
+        correct = True if tile.color == guess.team else False
+        return correct, tile.color

@@ -158,11 +158,48 @@ async def new_hint(request: Request, game_id: uuid.UUID, hint: Hint):
         )
         # update game in Redis cache
         await request.app.state.cache.set(
-            f"game:{game_id}", game.model_dump(), ex=CACHE_TIMEOUT_SECONDS
+            f"game:{game_id}", game.model_dump_json(), ex=CACHE_TIMEOUT_SECONDS
         )
         logger.debug(f"Cache updated for game with ID, {game_id}")
         # ... need to pass hint to agent
-        return hint.model_dump_json()
+        return hint.model_dump()
+    else:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+
+@app.post("/game/{game_id}/guess")
+async def new_guess(request: Request, game_id: uuid.UUID, guess: Guess):
+    game_data = await request.app.state.cache.get(f"game:{game_id}")
+    if game_data:
+        game = Game.model_validate_json(game_data)
+        logger.debug(f"Retrieved Game with ID, {game_id} from cache.")
+        # validate that guessed word is in game board
+        if guess.word.upper() not in game.words:
+            logger.debug(
+                f"[{guess.team}]: Unable to make guess, '{guess.word}' is not in game."
+            )
+            raise HTTPException(
+                status_code=404, detail=f"Guessed word not found in game"
+            )
+
+        logger.debug(f"[{guess.team} team]: Agent guessed the word, '{guess.word}'.")
+
+        # save guess to game state and update tile guessed
+        correct, color = game.guess_tile(guess)
+
+        if not correct:
+            logger.debug(
+                f"[{guess.team} team]: Incorrect guess! The '{guess.word}' tile is a {color} tile."
+            )
+        logger.debug(
+            f"[{guess.team} team]: Correct guess! The '{guess.word}' tile is a {color} tile."
+        )
+        # update game in Redis cache
+        await request.app.state.cache.set(
+            f"game:{game_id}", game.model_dump_json(), ex=CACHE_TIMEOUT_SECONDS
+        )
+        return {"correct": correct, "color": color}
+
     else:
         raise HTTPException(status_code=404, detail="Game not found")
 
