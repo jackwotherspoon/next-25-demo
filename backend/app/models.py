@@ -18,8 +18,23 @@ import asyncpg
 from pydantic import BaseModel
 
 
+class Hint(BaseModel):
+    """Model for game hint."""
+
+    team: str  # team giving the hint
+    clue: str  # the word given as the clue
+    number: int  # the number of tiles the hint pertains to
+
+
+class Guess(BaseModel):
+    """Model for game guess."""
+
+    team: str  # the team to make the guess for
+    word: str  # word being guessed
+
+
 class Tile(BaseModel):
-    """Class for individual game tile."""
+    """Model for individual game tile."""
 
     id: uuid.UUID = uuid.uuid4()  # tile id
     guessed: bool = False  # True if tile has been guessed, False otherwise
@@ -64,11 +79,13 @@ def generate_tiles(words: list[str]) -> dict[str, Tile]:
 
 
 class Game(BaseModel):
-    """Class for game board."""
+    """Model for game board."""
 
     id: uuid.UUID = uuid.uuid4()  # game id
     words: list[str] = []  # words for game board
     tiles: dict[str, Tile] = {}  # word --> tile info
+    hints: list[Hint] = []  # list of game hints given
+    guesses: list[Guess] = []  # list of guesses made
 
     @classmethod
     async def create(cls, pool: asyncpg.Pool, theme: str):

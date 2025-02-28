@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .cache import init_cache
 from .database import init_db_pool
-from .models import Game
+from .models import Game, Guess, Hint
 from .tools import thesaurus_tool
 
 # turn on logging
@@ -81,7 +81,13 @@ async def new_game(request: Request, theme: str = "regular"):
         f"game:{game.id}", game.model_dump_json(), ex=CACHE_TIMEOUT_SECONDS
     )
     logger.debug(f"Caching game with ID, {game.id}")
-    return {"game_id": game.id, "words": game.words, "tiles": game.tiles}
+    return {
+        "game_id": game.id,
+        "words": game.words,
+        "tiles": game.tiles,
+        "hints": game.hints,
+        "guesses": game.guesses,
+    }
 
 
 @app.patch("/game/{game_id}")
@@ -98,9 +104,11 @@ async def update_game(request: Request, game_id: uuid.UUID, game: Game):
         )
         logger.debug(f"Cache updated for game with ID, {game_id}")
         return {
-            "game_id": updated_game.id,
-            "words": updated_game.words,
-            "tiles": updated_game.tiles,
+            "game_id": game.id,
+            "words": game.words,
+            "tiles": game.tiles,
+            "hints": game.hints,
+            "guesses": game.guesses,
         }
     else:
         raise HTTPException(status_code=404, detail="Game not found")
@@ -112,7 +120,13 @@ async def get_game_by_id(request: Request, game_id: uuid.UUID):
     if game_data:
         game = Game.model_validate_json(game_data)
         logger.debug(f"Retrieved Game with ID, {game_id} from cache.")
-        return {"game_id": game.id, "words": game.words, "tiles": game.tiles}
+        return {
+            "game_id": game.id,
+            "words": game.words,
+            "tiles": game.tiles,
+            "hints": game.hints,
+            "guesses": game.guesses,
+        }
     else:
         raise HTTPException(status_code=404, detail="Game not found")
 
@@ -126,6 +140,29 @@ async def delete_game(request: Request, game_id: uuid.UUID):
         await request.app.state.cache.delete(f"game:{game_id}")
         logger.debug(f"Deleted Game with ID, {game_id} from cache.")
         return {"detail": "Successfully deleted Game."}
+    else:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+
+@app.post("/game/{game_id}/hint")
+async def new_hint(request: Request, game_id: uuid.UUID, hint: Hint):
+    # get game from cache
+    game_data = await request.app.state.cache.get(f"game:{game_id}")
+    if game_data:
+        game = Game.model_validate_json(game_data)
+        logger.debug(f"Retrieved Game with ID, {game_id} from cache.")
+        # save hint to game state
+        game.hints.append(hint)
+        logger.debug(
+            f"[{hint.team} team]: Adding hint with clue '{hint.clue}' for {hint.number} to game state."
+        )
+        # update game in Redis cache
+        await request.app.state.cache.set(
+            f"game:{game_id}", game.model_dump(), ex=CACHE_TIMEOUT_SECONDS
+        )
+        logger.debug(f"Cache updated for game with ID, {game_id}")
+        # ... need to pass hint to agent
+        return hint.model_dump_json()
     else:
         raise HTTPException(status_code=404, detail="Game not found")
 
