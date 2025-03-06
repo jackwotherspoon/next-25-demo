@@ -118,3 +118,9 @@ class Game(BaseModel):
         # check if team guessing was correct
         correct = True if tile.color == guess.team else False
         return correct, tile.color
+
+
+class Agent(BaseModel):
+    model: str
+    prompt: str
+    temperature: float

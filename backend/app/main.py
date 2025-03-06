@@ -21,17 +21,25 @@ import redis.asyncio as redis
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from .agents import create_agent
 from .cache import init_cache
 from .database import init_db_pool
 from .models import Game, Guess, Hint
 from .tools import thesaurus_tool
 
 # turn on logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
+logger = logging.getLogger(name="app")
+logger.setLevel(logging.INFO)
 
 # default cache expiry is 1 hour
 CACHE_TIMEOUT_SECONDS = 3600
+
+AGENT = create_agent()
+
+GUESS_TEMPLATE = (
+    "The hint is: {number} {clue}. The list of words available are as follows: {words}"
+)
 
 
 @asynccontextmanager
@@ -144,8 +152,8 @@ async def delete_game(request: Request, game_id: uuid.UUID):
         raise HTTPException(status_code=404, detail="Game not found")
 
 
-@app.post("/game/{game_id}/hint")
-async def new_hint(request: Request, game_id: uuid.UUID, hint: Hint):
+@app.post("/game/{game_id}/guess")
+async def new_guess(request: Request, game_id: uuid.UUID, hint: Hint):
     # get game from cache
     game_data = await request.app.state.cache.get(f"game:{game_id}")
     if game_data:
@@ -156,49 +164,46 @@ async def new_hint(request: Request, game_id: uuid.UUID, hint: Hint):
         logger.debug(
             f"[{hint.team} team]: Adding hint with clue '{hint.clue}' for {hint.number} to game state."
         )
-        # update game in Redis cache
-        await request.app.state.cache.set(
-            f"game:{game_id}", game.model_dump_json(), ex=CACHE_TIMEOUT_SECONDS
+        # have Agent make guesses
+        agent_response = AGENT.query(
+            input=GUESS_TEMPLATE.format(
+                number=hint.number, clue=hint.clue, words=game.words
+            )
         )
-        logger.debug(f"Cache updated for game with ID, {game_id}")
-        # ... need to pass hint to agent
-        return hint.model_dump()
-    else:
-        raise HTTPException(status_code=404, detail="Game not found")
-
-
-@app.post("/game/{game_id}/guess")
-async def new_guess(request: Request, game_id: uuid.UUID, guess: Guess):
-    game_data = await request.app.state.cache.get(f"game:{game_id}")
-    if game_data:
-        game = Game.model_validate_json(game_data)
-        logger.debug(f"Retrieved Game with ID, {game_id} from cache.")
-        # validate that guessed word is in game board
-        if guess.word.upper() not in game.words:
-            logger.debug(
-                f"[{guess.team}]: Unable to make guess, '{guess.word}' is not in game."
-            )
-            raise HTTPException(
-                status_code=404, detail=f"Guessed word not found in game"
-            )
-
-        logger.debug(f"[{guess.team} team]: Agent guessed the word, '{guess.word}'.")
-
-        # save guess to game state and update tile guessed
-        correct, color = game.guess_tile(guess)
-
-        if not correct:
-            logger.debug(
-                f"[{guess.team} team]: Incorrect guess! The '{guess.word}' tile is a {color} tile."
-            )
+        # get Agent response into list format
+        guesses = eval(agent_response["output"])
         logger.debug(
-            f"[{guess.team} team]: Correct guess! The '{guess.word}' tile is a {color} tile."
+            f"[{hint.team}]: Agent returned {guesses} for hint, '{hint.number} {hint.clue}'"
         )
+        # list for response object
+        guess_responses = []
+        for guess in guesses:
+            # validate that guessed word is in game board
+            if guess.upper() not in game.words:
+                logger.debug(
+                    f"[{hint.team}]: Unable to make guess, '{guess}' is not in game."
+                )
+
+            logger.debug(f"[{hint.team} team]: Agent is guessing the word, '{guess}'.")
+
+            # save guess to game state and update tile guessed
+            correct, color = game.guess_tile(Guess(team=hint.team, word=guess))
+            guess_responses.append({"word": guess, "correct": correct, "color": color})
+            if not correct:
+                logger.debug(
+                    f"[{hint.team} team]: Incorrect guess! The '{guess}' tile is a {color} tile."
+                )
+                # if guess is incorect then turn is over
+                break
+            logger.debug(
+                f"[{hint.team} team]: Correct guess! The '{guess}' tile is a {color} tile."
+            )
+
         # update game in Redis cache
         await request.app.state.cache.set(
             f"game:{game_id}", game.model_dump_json(), ex=CACHE_TIMEOUT_SECONDS
         )
-        return {"correct": correct, "color": color}
+        return {"guesses": guess_responses}
 
     else:
         raise HTTPException(status_code=404, detail="Game not found")
