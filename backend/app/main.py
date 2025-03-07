@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .agents import create_agent
 from .cache import init_cache
 from .database import init_db_pool
-from .models import Game, Guess, Hint
+from .models import ExtendedHint, Game, Guess, Hint
 from .tools import thesaurus_tool
 
 # turn on logging
@@ -46,9 +46,7 @@ SUPPORTED_MODELS = [
 agents = {}
 
 # template used for structuring hints to agent for it to guess
-GUESS_TEMPLATE = (
-    "The hint is: {number} {clue}. The list of words available are as follows: {words}"
-)
+GUESS_TEMPLATE = "The hint is: {number} {clue}. The list of words available to guess are as follows: {words}. You can only guess words from this list, if a word is not in this list, it can not be guessed."
 
 
 @asynccontextmanager
@@ -149,26 +147,37 @@ async def delete_game(request: Request, game_id: uuid.UUID):
 
 
 @app.post("/game/{game_id}/guess")
-async def new_guess(request: Request, game_id: uuid.UUID, hint: Hint):
+async def new_guess(request: Request, game_id: uuid.UUID, hint: ExtendedHint):
     # get game from cache
     game_data = await request.app.state.cache.get(f"game:{game_id}")
     if game_data:
         game = Game.model_validate_json(game_data)
         logger.debug(f"Retrieved Game with ID, {game_id} from cache.")
         # save hint to game state
-        game.hints.append(hint)
+        game.hints.append(Hint(team=hint.team, clue=hint.clue, number=hint.number))
         logger.debug(
             f"[{hint.team} team]: Adding hint with clue '{hint.clue}' for {hint.number} to game state."
         )
-        # get agent from stored agents
-        agent = agents["gemini-2.0-flash-lite"]
+        # if model passed is not supported, default to "gemini-2.0-flash-lite"
+        if hint.model not in SUPPORTED_MODELS:
+            logger.debug(
+                f"[{hint.team} team]: Model {hint.model} is not supported, defaulting to agent with gemini-2.0-flash-lite model."
+            )
+            agent = agents["gemini-2.0-flash-lite"]
+        else:
+            # get agent from stored agents
+            agent = agents[hint.model]
+            logger.debug(f"[{hint.team} team]: Using agent with {hint.model} model.")
+        logger.debug(
+            GUESS_TEMPLATE.format(number=hint.number, clue=hint.clue, words=game.words)
+        )
         # have agent make guesses
         agent_response = agent.query(
             input=GUESS_TEMPLATE.format(
                 number=hint.number, clue=hint.clue, words=game.words
             )
         )
-        # get Agent response into list format
+        # get agent response into list format
         guesses = eval(agent_response["output"])
         logger.debug(
             f"[{hint.team}]: Agent returned {guesses} for hint, '{hint.number} {hint.clue}'"
@@ -179,8 +188,9 @@ async def new_guess(request: Request, game_id: uuid.UUID, hint: Hint):
             # validate that guessed word is in game board
             if guess.upper() not in game.words:
                 logger.debug(
-                    f"[{hint.team}]: Unable to make guess, '{guess}' is not in game."
+                    f"[{hint.team} team]: Unable to make guess, '{guess}' is not in game."
                 )
+                continue
 
             logger.debug(f"[{hint.team} team]: Agent is guessing the word, '{guess}'.")
 

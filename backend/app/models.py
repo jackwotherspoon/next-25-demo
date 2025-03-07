@@ -26,6 +26,12 @@ class Hint(BaseModel):
     number: int  # the number of tiles the hint pertains to
 
 
+class ExtendedHint(Hint):
+    "Extended model for game hint, includes model config."
+
+    model: str = "gemini-2.0-flash-lite"
+
+
 class Guess(BaseModel):
     """Model for game guess."""
 
