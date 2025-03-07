@@ -35,8 +35,17 @@ logger.setLevel(logging.INFO)
 # default cache expiry is 1 hour
 CACHE_TIMEOUT_SECONDS = 3600
 
-AGENT = create_agent()
+# supported LLM models
+SUPPORTED_MODELS = [
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash-lite",
+]
 
+# global dictionary for storing agents
+agents = {}
+
+# template used for structuring hints to agent for it to guess
 GUESS_TEMPLATE = (
     "The hint is: {number} {clue}. The list of words available are as follows: {words}"
 )
@@ -44,12 +53,17 @@ GUESS_TEMPLATE = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global agents
     # setup Postgres connection pool
     connector, pool = await init_db_pool()
     app.state.pool: asyncpg.Pool = pool
     # setup Redis cache
     cache = init_cache()
     app.state.cache: redis.Redis = cache
+    # setup LangChain agents with Agent Engine
+    for model in SUPPORTED_MODELS:
+        agent = create_agent(model=model)
+        agents[model] = agent
     yield
     # gracefully close Redis client
     await cache.close()
@@ -164,8 +178,10 @@ async def new_guess(request: Request, game_id: uuid.UUID, hint: Hint):
         logger.debug(
             f"[{hint.team} team]: Adding hint with clue '{hint.clue}' for {hint.number} to game state."
         )
-        # have Agent make guesses
-        agent_response = AGENT.query(
+        # get agent from stored agents
+        agent = agents["gemini-2.0-flash-lite"]
+        # have agent make guesses
+        agent_response = agent.query(
             input=GUESS_TEMPLATE.format(
                 number=hint.number, clue=hint.clue, words=game.words
             )
