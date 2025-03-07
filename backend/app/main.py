@@ -103,13 +103,7 @@ async def new_game(request: Request, theme: str = "regular"):
         f"game:{game.id}", game.model_dump_json(), ex=CACHE_TIMEOUT_SECONDS
     )
     logger.debug(f"Caching game with ID, {game.id}")
-    return {
-        "game_id": game.id,
-        "words": game.words,
-        "tiles": game.tiles,
-        "hints": game.hints,
-        "guesses": game.guesses,
-    }
+    return game
 
 
 @app.patch("/game/{game_id}")
@@ -125,13 +119,7 @@ async def update_game(request: Request, game_id: uuid.UUID, game: Game):
             f"game:{game_id}", updated_game.model_dump_json(), ex=CACHE_TIMEOUT_SECONDS
         )
         logger.debug(f"Cache updated for game with ID, {game_id}")
-        return {
-            "game_id": game.id,
-            "words": game.words,
-            "tiles": game.tiles,
-            "hints": game.hints,
-            "guesses": game.guesses,
-        }
+        return updated_game
     else:
         raise HTTPException(status_code=404, detail="Game not found")
 
@@ -142,13 +130,7 @@ async def get_game_by_id(request: Request, game_id: uuid.UUID):
     if game_data:
         game = Game.model_validate_json(game_data)
         logger.debug(f"Retrieved Game with ID, {game_id} from cache.")
-        return {
-            "game_id": game.id,
-            "words": game.words,
-            "tiles": game.tiles,
-            "hints": game.hints,
-            "guesses": game.guesses,
-        }
+        return game
     else:
         raise HTTPException(status_code=404, detail="Game not found")
 
