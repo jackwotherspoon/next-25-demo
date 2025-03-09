@@ -30,7 +30,7 @@ from .tools import thesaurus_tool
 # turn on logging
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(name="app")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 # default cache expiry is 1 hour
 CACHE_TIMEOUT_SECONDS = 3600
