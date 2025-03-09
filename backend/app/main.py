@@ -168,15 +168,13 @@ async def new_guess(request: Request, game_id: uuid.UUID, hint: ExtendedHint):
             # get agent from stored agents
             agent = agents[hint.model]
             logger.debug(f"[{hint.team} team]: Using agent with {hint.model} model.")
-        logger.debug(
-            GUESS_TEMPLATE.format(number=hint.number, clue=hint.clue, words=game.words)
+
+        formatted_guess = GUESS_TEMPLATE.format(
+            number=hint.number, clue=hint.clue, words=game.get_unguessed_words()
         )
+        logger.debug(formatted_guess)
         # have agent make guesses
-        agent_response = agent.query(
-            input=GUESS_TEMPLATE.format(
-                number=hint.number, clue=hint.clue, words=game.words
-            )
-        )
+        agent_response = agent.query(input=formatted_guess)
         # get agent response into list format
         guesses = eval(agent_response["output"])
         logger.debug(

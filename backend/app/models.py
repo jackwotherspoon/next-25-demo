@@ -125,6 +125,19 @@ class Game(BaseModel):
         correct = True if tile.color == guess.team else False
         return correct, tile.color
 
+    def get_unguessed_words(self) -> list[str]:
+        """Get list of remaining unguessed words in game.
+
+        Returns:
+            list[str]: List of words remaining to be guessed.
+        """
+        unguessed_words = []
+        # loop through game.tiles dictionary
+        for word, tile in self.tiles.items():
+            if tile.guessed is False:
+                unguessed_words.append(word)
+        return unguessed_words
+
 
 class Agent(BaseModel):
     model: str
