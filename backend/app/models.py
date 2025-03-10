@@ -15,7 +15,7 @@
 import uuid
 
 import asyncpg
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Hint(BaseModel):
@@ -37,6 +37,7 @@ class Guess(BaseModel):
 
     team: str  # the team to make the guess for
     word: str  # word being guessed
+    reasoning: str  # reasoning for guess
 
 
 class Tile(BaseModel):
@@ -143,3 +144,12 @@ class Agent(BaseModel):
     model: str
     prompt: str
     temperature: float
+
+
+class AgentGuess(BaseModel):
+    guess: str = Field(description="guess of word to answer a hint")
+    reasoning: str = Field(description="reasoning to choice of guess")
+
+
+class AgentResponse(BaseModel):
+    guesses: list[AgentGuess] = Field(description="guesses in response to hint")

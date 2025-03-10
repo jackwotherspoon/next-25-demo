@@ -24,8 +24,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from .agents import create_agent
 from .cache import init_cache
 from .database import init_db_pool
-from .models import ExtendedHint, Game, Guess, Hint
+from .models import AgentResponse, ExtendedHint, Game, Guess, Hint
 from .tools import thesaurus_tool
+from .utils import format_agent_output
 
 # turn on logging
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
@@ -172,37 +173,55 @@ async def new_guess(request: Request, game_id: uuid.UUID, hint: ExtendedHint):
         formatted_guess = GUESS_TEMPLATE.format(
             number=hint.number, clue=hint.clue, words=game.get_unguessed_words()
         )
-        logger.debug(formatted_guess)
         # have agent make guesses
         agent_response = agent.query(input=formatted_guess)
-        # get agent response into list format
-        guesses = eval(agent_response["output"])
+        try:
+            # get agent response into list format
+            formatted_output = format_agent_output(agent_response["output"])
+            logger.debug(formatted_output)
+            guesses = AgentResponse(guesses=eval(formatted_output))
+        except:
+            raise HTTPException(
+                status_code=500,
+                detail="Agent did not return properly formatted response!",
+            )
         logger.debug(
             f"[{hint.team}]: Agent returned {guesses} for hint, '{hint.number} {hint.clue}'"
         )
         # list for response object
         guess_responses = []
-        for guess in guesses:
+        for guess in guesses.guesses:
             # validate that guessed word is in game board
-            if guess.upper() not in game.words:
+            if guess.guess.upper() not in game.words:
                 logger.debug(
-                    f"[{hint.team} team]: Unable to make guess, '{guess}' is not in game."
+                    f"[{hint.team} team]: Unable to make guess, '{guess.guess}' is not in game."
                 )
                 continue
 
-            logger.debug(f"[{hint.team} team]: Agent is guessing the word, '{guess}'.")
+            logger.debug(
+                f"[{hint.team} team]: Agent is guessing the word, '{guess.guess}' with reasoning of '{guess.reasoning}'."
+            )
 
             # save guess to game state and update tile guessed
-            correct, color = game.guess_tile(Guess(team=hint.team, word=guess))
-            guess_responses.append({"word": guess, "correct": correct, "color": color})
+            correct, color = game.guess_tile(
+                Guess(team=hint.team, word=guess.guess, reasoning=guess.reasoning)
+            )
+            guess_responses.append(
+                {
+                    "word": guess.guess,
+                    "reasoning": guess.reasoning,
+                    "correct": correct,
+                    "color": color,
+                }
+            )
             if not correct:
                 logger.debug(
-                    f"[{hint.team} team]: Incorrect guess! The '{guess}' tile is a {color} tile."
+                    f"[{hint.team} team]: Incorrect guess! The '{guess.guess}' tile is a {color} tile."
                 )
                 # if guess is incorect then turn is over
                 break
             logger.debug(
-                f"[{hint.team} team]: Correct guess! The '{guess}' tile is a {color} tile."
+                f"[{hint.team} team]: Correct guess! The '{guess.guess}' tile is a {color} tile."
             )
 
         # update game in Redis cache
