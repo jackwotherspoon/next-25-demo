@@ -42,7 +42,7 @@ If you are guessing based on a hint, you will be given a hint in the following f
 You must output a python list of dict objects with [number] of objects. Each dict object
 must have a 'guess' and 'reasoning' field. The 'guess' field should contain
 the word being guessed while the 'reasoning' field should contain the reasoning
-for the guess.
+for the guess. Both fields should be strings and surrounded by double-quotes.
 <EXAMPLE 1>
 
 INPUT: The hint is: '2 superhero' The list of words available are as follows: ["UNDERTAKER","GROUND","FAN","BOND","LAP","WAKE","ROBIN","ORANGE","BRIDGE","GAS","STRIKE","ANGEL","LEPRECHAUN","MAPLE","HEAD","BRUSH","FLUTE","WIND","PAN","GREEN","MINE","SKYSCRAPER","ROBOT","OCTOPUS","NEEDLE"]
