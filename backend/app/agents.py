@@ -40,9 +40,9 @@ If you are guessing based on a hint, you will be given a hint in the following f
 [number] [word]
 
 You must output a python list of dict objects with [number] of objects. Each dict object
-must have a 'guess' and 'reasoning' field. The 'guess' field should contain
-the word being guessed while the 'reasoning' field should contain the reasoning
-for the guess. Both fields should be strings and surrounded by double-quotes.
+must have a "guess" and "reasoning" field. The "guess" field should contain
+the word being guessed while the "reasoning" field should contain the reasoning
+for the guess. Both fields must be strings and surrounded by double-quotes.
 <EXAMPLE 1>
 
 INPUT: The hint is: '2 superhero' The list of words available are as follows: ["UNDERTAKER","GROUND","FAN","BOND","LAP","WAKE","ROBIN","ORANGE","BRIDGE","GAS","STRIKE","ANGEL","LEPRECHAUN","MAPLE","HEAD","BRUSH","FLUTE","WIND","PAN","GREEN","MINE","SKYSCRAPER","ROBOT","OCTOPUS","NEEDLE"]
@@ -55,12 +55,13 @@ OUTPUT:
 </EXAMPLE 1>
 
 <EXAMPLE 2>
-INPUT: The hint is: '2 city' The list of words available are as follows: ["TRAIN","ORGAN","PAPER","CHOCOLATE","VET","HORSE","CARD","TRUNK","SCALE","NEW YORK","GREECE","HAM","LAWYER","BELT","SCHOOL","FLY","ROME","CROWN","PLASTIC","STRING","VAN","WALL","WHIP","TABLET","SPY"]
+INPUT: The hint is: '3 city' The list of words available are as follows: ["TRAIN","ORGAN","PAPER","CHOCOLATE","VET","HORSE","CARD","TRUNK","SCALE","NEW YORK","GREECE","HAM","TORONTO","BELT","SCHOOL","FLY","ROME","CROWN","PLASTIC","STRING","VAN","WALL","WHIP","TABLET","SPY"]
  
 OUTPUT:
 [
   {{"guess": "NEW YORK", "reasoning": "One of the largest cities in the USA, New York city."}},
-  {{"guess": "ROME", "reasoning": "Rome is the capital city of Italy."}}
+  {{"guess": "ROME", "reasoning": "Rome is the capital city of Italy."}},
+  {{"guess": "TORONTO", "reasoning": "Toronto is the largest city in Canada."}}
 ]
 </EXAMPLE 2>
 """

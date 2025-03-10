@@ -22,6 +22,8 @@ def format_agent_output(output: str) -> str:
 
     Remove markdown wrapping from string
     """
+    # strip any trailing or leading whitespace
+    output = output.strip()
     # remove potential markdown prefixes
     output = output.removeprefix("```python")
     output = output.removeprefix("```json")
