@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes rainbow-border {
+  0%, 100% {
+    background: linear-gradient(
+      45deg,
+      #4285f4,
+      #ea4335,
+      #fbbc05,
+      #34a853,
+      #4285f4
+    );
+    background-size: 400% 400%;
+    animation: gradient 3s ease infinite;
+  }
+}
+
+@keyframes rainbow-glow {
+  0%, 100% {
+    filter: blur(20px);
+    opacity: 0.5;
+  }
+  50% {
+    filter: blur(15px);
+    opacity: 0.3;
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-rainbow-border {
+  animation: rainbow-border 3s linear infinite;
+}
+
+.animate-rainbow-glow {
+  animation: rainbow-glow 3s linear infinite;
+}
