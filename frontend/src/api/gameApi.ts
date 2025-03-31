@@ -1,7 +1,7 @@
-import { GameResponse, GameState, GameHistory, Hint, AIHintResponse, AIGuessResponse, TeamType, AIConfig, Card, CardType, Game, Tile } from '../types';
+import { GameResponse, GameState, GameHistory, Hint, AIHintResponse, AIGuessResponse, TeamType, AIConfig, Card, CardType, Game, Tile, GameTheme } from '../types';
 import { WORD_LIST } from '../data/words';
 
-const API_BASE_URL = 'https://backend-service-670180168258.us-central1.run.app';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://backend-service-670180168258.us-central1.run.app';
 const TIMEOUT_MS = 5000; // 5 seconds timeout
 const MAX_RETRIES = 2;
 
@@ -56,9 +56,12 @@ export function mapTileColorToCardType(color: string): CardType {
   }
 }
 
-export async function createNewGame(): Promise<GameResponse> {
+export async function createNewGame(theme: GameTheme = 'regular'): Promise<GameResponse> {
   try {
-    const response = await fetchWithTimeout(`${API_BASE_URL}/game`, {
+    const url = new URL(`${API_BASE_URL}/game`);
+    url.searchParams.append('theme', theme);
+    
+    const response = await fetchWithTimeout(url.toString(), {
       method: 'POST',
       headers: {
         'Accept': 'application/json',

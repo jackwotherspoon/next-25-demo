@@ -1,6 +1,7 @@
 export type CardType = 'yellow' | 'green' | 'neutral' | 'assassin';
 export type TeamType = 'orange' | 'green';
 export type TileColor = 'orange' | 'green' | 'beige' | 'red';
+export type GameTheme = 'regular' | 'easter' | 'christmas' | 'technology';
 
 export interface Hint {
   team: string;
@@ -49,6 +50,7 @@ export interface GameState {
   hints: Hint[];
   guesses: Guess[];
   ai_config?: AIConfig;
+  theme: GameTheme;
 }
 
 export interface Card {
@@ -78,15 +80,5 @@ export interface GameHistory {
     ai_config?: AIConfig;
   }>;
   winner?: TeamType;
-}
-
-export interface AIHintResponse {
-  hint: string;
-  number: number;
-  agent_config: AIConfig;
-}
-
-export interface AIGuessResponse {
-  guesses: AIGuessResult[];
-  agent_config: AIConfig;
+  theme: GameTheme;
 }

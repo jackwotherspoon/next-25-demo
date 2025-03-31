@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GameState, AIConfig, Card, CardType, Game, Tile, Hint, Guess, AIGuessResult } from './types';
+import { GameState, AIConfig, Card, CardType, Game, Tile, Hint, Guess, AIGuessResult, GameTheme } from './types';
 import GameBoard from './components/GameBoard';
 import AIControls from './components/AIControls';
 import { Play, RotateCcw, Eye, EyeOff, Sun, Moon } from 'lucide-react';
@@ -18,13 +18,15 @@ function App() {
     current_hint: null,
     guesses_this_turn: 0,
     hints: [],
-    guesses: []
+    guesses: [],
+    theme: 'regular'
   });
 
   const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiGuessedWord, setAiGuessedWord] = useState<string | undefined>();
+  const [selectedTheme, setSelectedTheme] = useState<GameTheme>('regular');
   
   const [aiConfig, setAIConfig] = useState<AIConfig>({
     model: 'gemini-1.5-pro',
@@ -66,7 +68,8 @@ function App() {
         id: newGameState.id,
         tiles,
         hints: newGameState.hints,
-        guesses: newGameState.guesses
+        guesses: newGameState.guesses,
+        theme: newGameState.theme
       };
 
       await updateGameState(newGameState.id, update);
@@ -245,7 +248,7 @@ function App() {
     }));
     
     try {
-      const gameResponse = await createNewGame();
+      const gameResponse = await createNewGame(selectedTheme);
       
       const cards: Card[] = shuffleArray(Object.entries(gameResponse.tiles).map(([id, tile]) => ({
         id: tile.id,
@@ -264,7 +267,8 @@ function App() {
         current_hint: null,
         guesses_this_turn: 0,
         hints: [],
-        guesses: []
+        guesses: [],
+        theme: selectedTheme
       };
 
       setGameState(newGameState);
@@ -298,7 +302,8 @@ function App() {
         current_hint: null,
         guesses_this_turn: 0,
         hints: [],
-        guesses: []
+        guesses: [],
+        theme: selectedTheme
       });
     } finally {
       setLoading(false);
@@ -353,6 +358,24 @@ function App() {
               >
                 {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
+              <select
+                value={selectedTheme}
+                onChange={(e) => setSelectedTheme(e.target.value as GameTheme)}
+                className={`
+                  px-4 rounded-xl font-medium text-sm
+                  transition-all duration-300 ease-in-out
+                  border border-transparent
+                  ${theme === 'dark'
+                    ? 'bg-white/10 text-white hover:bg-white/20 hover:border-white/10'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:border-black/10'
+                  }
+                `}
+              >
+                <option value="regular">Regular Theme</option>
+                <option value="easter">Easter Theme</option>
+                <option value="christmas">Christmas Theme</option>
+                <option value="technology">Technology Theme</option>
+              </select>
               <button
                 onClick={() => setShowAll(!showAll)}
                 className={`
