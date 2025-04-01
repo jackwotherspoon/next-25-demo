@@ -1,6 +1,12 @@
-# next-25-demo
+# :game_die: :robot: Secret Agents (Next 2025)
 
-Board game demo for Google Cloud Next 2025
+Team up with an AI agent to compete at this popular board game! Discover how
+Vertex AI, Memorystore and Cloud SQL with different Gemini models and tools can
+ultimately lead to victory!
+
+<p align="center">
+    <img src="https://raw.githubusercontent.com/jackwotherspoon/next-25-demo/main/docs/game.png" alt="secret agents board game">
+</p>
 
 ## Backend
 
