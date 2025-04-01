@@ -97,5 +97,5 @@ gcloud run deploy frontend-service \
 
 ## Future work
 
-[] Cloud SQL with PSC endpoint
-[] Terraform Support
+- [] Cloud SQL with PSC endpoint
+- [] Terraform Support
