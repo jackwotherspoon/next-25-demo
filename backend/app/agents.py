@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import vertexai
-from langchain_core.output_parsers import JsonOutputParser
-from vertexai.preview import reasoning_engines
+from typing import Any, Callable, Mapping, Optional, Sequence
 
-from .models import AgentResponse
+import vertexai
+from vertexai import agent_engines
 
 # initialize Vertex AI in current project
 vertexai.init()
@@ -67,20 +66,49 @@ OUTPUT:
 """
 
 
+class SimpleLangGraphAgent:
+    def __init__(
+        self,
+        model: str,
+        model_kwargs: Optional[Mapping[str, Any]] = None,
+        tools: Optional[Sequence[Callable]] = None,
+    ) -> None:
+        self.model_name = model
+        self.model_kwargs = model_kwargs or {}
+        self.tools = tools
+
+    # The set_up method is used to define application initialization logic
+    def set_up(self) -> None:
+        from langchain_google_vertexai import ChatVertexAI
+        from langgraph.prebuilt import create_react_agent
+
+        model = ChatVertexAI(model_name=self.model_name, **self.model_kwargs)
+
+        if self.tools:
+            model = model.bind_tools(tools=self.tools)
+        else:
+            self.tools = []
+
+        self.graph = create_react_agent(
+            model, tools=self.tools, prompt=SYSTEM_INSTRUCTION_TEMPLATE
+        )
+
+    def query(self, **kwargs):
+        return self.graph.invoke(**kwargs)
+
+
 def create_agent(
     model: str = "gemini-2.0-flash-lite",
     temperature: float = 0.8,
-) -> reasoning_engines.LangchainAgent:
+) -> agent_engines.LanggraphAgent:
     # parse output as JSON using output parser
     # parser = JsonOutputParser(pydantic_object=AgentResponse)
 
-    # create LangChain Agent using Agent Engine
-    agent = reasoning_engines.LangchainAgent(
+    # create LangGraph Agent using Agent Engine
+    agent = SimpleLangGraphAgent(
         model=model,
-        tools=[],
-        # output_parser=parser,
-        agent_executor_kwargs={"return_intermediate_steps": False},
-        system_instruction=SYSTEM_INSTRUCTION_TEMPLATE,
         model_kwargs={"temperature": temperature},
+        tools=[],
     )
+    agent.set_up()
     return agent
