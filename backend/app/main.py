@@ -20,6 +20,7 @@ import asyncpg
 import redis.asyncio as redis
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from langchain_core.messages.ai import AIMessage
 
 from .agents import create_agent
 from .cache import init_cache
@@ -174,12 +175,15 @@ async def new_guess(request: Request, game_id: uuid.UUID, hint: ExtendedHint):
             number=hint.number, clue=hint.clue, words=game.get_unguessed_words()
         )
         # have agent make guesses
-        agent_response = agent.query(input=formatted_guess)
+        agent_response = agent.query(input={"messages": [("user", formatted_guess)]})
         try:
             # get agent response into list format
-            formatted_output = format_agent_output(agent_response["output"])
-            logger.debug(formatted_output)
-            guesses = AgentResponse(guesses=eval(formatted_output))
+            for message in agent_response["messages"]:
+                if type(message) is AIMessage:
+                    formatted_output = format_agent_output(message.content)
+                    logger.debug(formatted_output)
+                    guesses = AgentResponse(guesses=eval(formatted_output))
+                    break
         except:
             raise HTTPException(
                 status_code=500,

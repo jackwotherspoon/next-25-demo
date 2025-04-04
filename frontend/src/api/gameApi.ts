@@ -2,7 +2,7 @@ import { GameResponse, GameState, GameHistory, Hint, AIHintResponse, AIGuessResp
 import { WORD_LIST } from '../data/words';
 import { GoogleAuth } from 'google-auth-library';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://backend-service-670180168258.us-central1.run.app';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const TIMEOUT_MS = 5000; // 5 seconds timeout
 const MAX_RETRIES = 2;
 

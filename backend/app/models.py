@@ -101,7 +101,7 @@ class Game(BaseModel):
             rows = await conn.fetch(
                 f'SELECT "word" FROM "{theme}" ORDER BY RANDOM() LIMIT 25;'
             )
-            self.words = [row["word"] for row in rows]
+            self.words = [(row["word"]).upper() for row in rows]
         self.tiles = generate_tiles(self.words)
         return self
 
