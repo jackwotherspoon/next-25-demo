@@ -77,6 +77,7 @@ gcloud run deploy backend-service \
 > [!NOTE]
 >
 > For demo purposes the backend service is set to allow unauthenticated requests.
+>
 > In a production environment it is recommended to require authentication.
 
 Export the backend service URL so that it can be referenced by the frontend.
