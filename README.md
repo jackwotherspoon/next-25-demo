@@ -8,13 +8,11 @@ ultimately lead to victory!
 
 ## Table of contents
 
-- [:game\_die: :robot: Secret Agents (Next 2025)](#game_die-robot-secret-agents-next-2025)
-  - [Table of contents](#table-of-contents)
-  - [Architecture](#architecture)
-  - [Deployment](#deployment)
-    - [Backend](#backend)
-    - [Frontend](#frontend)
-  - [Future work](#future-work)
+- [Architecture](#architecture)
+- [Deployment](#deployment)
+  - [Backend](#backend)
+  - [Frontend](#frontend)
+- [Future work](#future-work)
 
 ## Architecture
 
