@@ -8,11 +8,13 @@ ultimately lead to victory!
 
 ## Table of contents
 
-- [Architecture](#architecture)
-- [Deployment](#deployment)
-  - [Backend](#backend)
-  - [Frontend](#frontend)
-- [Future work](#future-work)
+- [:game\_die: :robot: Secret Agents (Next 2025)](#game_die-robot-secret-agents-next-2025)
+  - [Table of contents](#table-of-contents)
+  - [Architecture](#architecture)
+  - [Deployment](#deployment)
+    - [Backend](#backend)
+    - [Frontend](#frontend)
+  - [Future work](#future-work)
 
 ## Architecture
 
@@ -74,6 +76,17 @@ gcloud run deploy backend-service \
     --allow-unauthenticated
 ```
 
+> [!NOTE]
+>
+> For demo purposes the backend service is set to allow unauthenticated requests.
+> In a production environment it is recommended to require authentication.
+
+Export the backend service URL so that it can be referenced by the frontend.
+
+```sh
+export BACKEND_SERVICE_URL=$(gcloud run services describe backend-service --region=us-central1 --format='value(status.url)')
+```
+
 ### Frontend
 
 ```sh
@@ -90,12 +103,22 @@ To deploy the frontend Cloud Run service:
 
 ```sh
 gcloud run deploy frontend-service \
-    --image us-central1-docker.pkg.dev/$PROJECT_ID/frontend-image/frontend:latest \
-    --service-account frontend-sa \
-    --allow-unauthenticated
+  --image us-central1-docker.pkg.dev/$PROJECT_ID/frontend-image/frontend:latest \
+  --service-account frontend-sa \
+  --set-env-vars VITE_API_BASE_URL=${BACKEND_SERVICE_URL} \
+  --no-allow-unauthenticated
 ```
+
+Run the Cloud Run services Proxy to authenticate to the frontend service:
+
+```sh
+gcloud run services proxy frontend-service
+```
+
+Now head over to <http://localhost:8080> to try out Secret Agents.
 
 ## Future work
 
 - [ ] Cloud SQL with PSC endpoint
+- [ ] Firebase Authentication
 - [ ] Terraform Support
