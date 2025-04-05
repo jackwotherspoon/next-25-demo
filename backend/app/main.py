@@ -75,10 +75,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 origins = [
-    "https://storied-gelato-660ed7.netlify.app",
-    "https://frontend-service-670180168258.us-central1.run.app",
+    # "https://<YOUR_FRONTEND_SERVICE_URL>",
     "http://localhost",
     "http://localhost:8080",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
