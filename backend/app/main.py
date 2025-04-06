@@ -84,6 +84,7 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex="^https:\/\/8080-cs.*cloudshell\.dev$",  # allow Cloud Shell on port 8080
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

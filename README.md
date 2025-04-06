@@ -120,4 +120,5 @@ Now head over to <http://localhost:8080> to try out Secret Agents.
 ## Future work
 
 - [ ] Cloud SQL with PSC endpoint
+- [ ] Firebase Authentication
 - [ ] Terraform Support
