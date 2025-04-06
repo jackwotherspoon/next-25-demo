@@ -18,10 +18,10 @@ from contextlib import asynccontextmanager
 from typing import Any, Optional
 
 import asyncpg
-import redis.asyncio as redis
-from fastapi import FastAPI, HTTPException, Request, Depends, Header, status
-from fastapi.middleware.cors import CORSMiddleware
 import firebase_admin
+import redis.asyncio as redis
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from firebase_admin import auth
 from langchain_core.messages.ai import AIMessage
 
