@@ -15,11 +15,14 @@
 import logging
 import uuid
 from contextlib import asynccontextmanager
+from typing import Any, Optional
 
 import asyncpg
 import redis.asyncio as redis
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends, Header, status
 from fastapi.middleware.cors import CORSMiddleware
+import firebase_admin
+from firebase_admin import auth
 from langchain_core.messages.ai import AIMessage
 
 from .agents import create_agent
@@ -50,6 +53,89 @@ agents = {}
 # template used for structuring hints to agent for it to guess
 GUESS_TEMPLATE = "The hint is: {number} {clue}. The list of words available to guess are as follows: {words}. You can only guess words from this list, if a word is not in this list, it can not be guessed."
 
+# --- Firebase Admin SDK Initialization ---
+try:
+    logger.info("Initializing Firebase Admin SDK...")
+    # Try using Application Default Credentials first (recommended for Cloud Run/GCP)
+    firebase_admin.initialize_app()
+    logger.info("Firebase Admin SDK initialized using Application Default Credentials.")
+except Exception as e_adc:
+    logger.error(
+        f"Failed to initialize Firebase Admin with ADC: {e_adc}", exc_info=True
+    )
+    raise RuntimeError("Could not initialize Firebase Admin SDK.") from e_adc
+
+
+# --- Authentication Dependency ---
+async def get_current_user(
+    authorization: Optional[str] = Header(None),
+) -> dict[str, Any]:
+    """
+    Dependency function to verify Firebase ID token from Authorization header.
+    Returns the decoded token payload (user information) upon successful verification.
+    Raises HTTPException for authentication errors.
+    """
+    if authorization is None:
+        logger.warning("Authorization header missing")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header is missing",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    parts = authorization.split()
+
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        logger.warning("Invalid Authorization header format")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization header format. Must be 'Bearer <token>'",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = parts[1]
+    try:
+        # Verify the ID token using Firebase Admin SDK.
+        decoded_token = auth.verify_id_token(token, check_revoked=False)
+        logger.debug(f"Token verified successfully for UID: {decoded_token.get('uid')}")
+        return decoded_token
+    except auth.ExpiredIdTokenError:
+        logger.warning("Expired ID token received.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token has expired. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except auth.RevokedIdTokenError:
+        logger.warning("Revoked ID token received.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token has been revoked. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except auth.InvalidIdTokenError as e:
+        logger.warning(f"Invalid ID token received: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,  # 403 Forbidden - token exists but is invalid
+            detail=f"Invalid authentication token: {e}",
+            headers={"WWW-Authenticate": 'Bearer error="invalid_token"'},
+        )
+    except auth.CertificateFetchError as e:
+        logger.error(f"Failed to fetch Firebase certificates: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error: Could not fetch verification certificates.",
+        )
+    except Exception as e:  # Catch any other unexpected errors during verification
+        logger.error(
+            f"An unexpected error occurred during token verification: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during token verification.",
+        )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -72,7 +158,7 @@ async def lifespan(app: FastAPI):
     await connector.close_async()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(title="Secret Agents Game API", lifespan=lifespan)
 
 origins = [
     # "https://<YOUR_FRONTEND_SERVICE_URL>",
@@ -84,7 +170,6 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex="^https:\/\/8080-cs.*cloudshell\.dev$",  # allow Cloud Shell on port 8080
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -93,11 +178,23 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    """Public root endpoint providing a welcome message."""
+    return {"message": "Welcome to the Secret Agents API!", "status": "OK"}
 
 
-@app.post("/game")
-async def new_game(request: Request, theme: str = "regular"):
+# --- Protected Game Endpoints ---
+# All subsequent endpoints will require authentication via the Depends(get_current_user)
+
+
+@app.post("/game", response_model=Game)
+async def new_game(
+    request: Request,
+    theme: str = "regular",
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    """Creates a new game session."""
+    user_uid = current_user.get("uid")
+    logger.debug(f"User {user_uid} creating new game with theme: {theme}")
     game = await Game.create(request.app.state.pool, theme)
     # add game to Redis cache
     await request.app.state.cache.set(
@@ -108,7 +205,15 @@ async def new_game(request: Request, theme: str = "regular"):
 
 
 @app.patch("/game/{game_id}")
-async def update_game(request: Request, game_id: uuid.UUID, game: Game):
+async def update_game(
+    request: Request,
+    game_id: uuid.UUID,
+    game: Game,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    """Updates an existing game state."""
+    user_uid = current_user.get("uid")
+    logger.debug(f"User {user_uid} updating game {game_id}")
     game_data = await request.app.state.cache.get(f"game:{game_id}")
     if game_data:
         stored_game = Game.model_validate_json(game_data)
@@ -126,7 +231,14 @@ async def update_game(request: Request, game_id: uuid.UUID, game: Game):
 
 
 @app.get("/game/{game_id}")
-async def get_game_by_id(request: Request, game_id: uuid.UUID):
+async def get_game_by_id(
+    request: Request,
+    game_id: uuid.UUID,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    """Retrieves a specific game state."""
+    user_uid = current_user.get("uid")
+    logger.debug(f"User {user_uid} retrieving game {game_id}")
     game_data = await request.app.state.cache.get(f"game:{game_id}")
     if game_data:
         game = Game.model_validate_json(game_data)
@@ -137,7 +249,14 @@ async def get_game_by_id(request: Request, game_id: uuid.UUID):
 
 
 @app.delete("/game/{game_id}")
-async def delete_game(request: Request, game_id: uuid.UUID):
+async def delete_game(
+    request: Request,
+    game_id: uuid.UUID,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    """Deletes a game session."""
+    user_uid = current_user.get("uid")
+    logger.debug(f"User {user_uid} deleting game {game_id}")
     # check that game is in cache
     game_data = await request.app.state.cache.get(f"game:{game_id}")
     if game_data:
@@ -150,7 +269,15 @@ async def delete_game(request: Request, game_id: uuid.UUID):
 
 
 @app.post("/game/{game_id}/guess")
-async def new_guess(request: Request, game_id: uuid.UUID, hint: ExtendedHint):
+async def new_guess(
+    request: Request,
+    game_id: uuid.UUID,
+    hint: ExtendedHint,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    """Processes a hint and generates AI guesses."""
+    user_uid = current_user.get("uid")
+    logger.debug(f"User {user_uid} submitting hint for game {game_id}")
     # get game from cache
     game_data = await request.app.state.cache.get(f"game:{game_id}")
     if game_data:
@@ -240,5 +367,7 @@ async def new_guess(request: Request, game_id: uuid.UUID, hint: ExtendedHint):
 
 
 @app.get("/thesaurus")
-async def get_synonyms(word: str):
+async def get_synonyms(
+    word: str, current_user: dict[str, Any] = Depends(get_current_user)
+):
     return thesaurus_tool(word)
