@@ -99,7 +99,7 @@ class SimpleLangGraphAgent:
 
 def create_agent(
     model: str = "gemini-2.0-flash-lite",
-    temperature: float = 0.8,
+    temperature: float = 0.6,
 ) -> agent_engines.LanggraphAgent:
     # parse output as JSON using output parser
     # parser = JsonOutputParser(pydantic_object=AgentResponse)

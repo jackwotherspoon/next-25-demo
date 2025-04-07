@@ -44,6 +44,9 @@ SUPPORTED_MODELS = [
     "gemini-2.0-flash-lite",
 ]
 
+# supported temperature values
+SUPPORTED_TEMPERATURES = [0.3, 0.6, 0.9]
+
 # global dictionary for storing agents
 agents = {}
 
@@ -60,10 +63,11 @@ async def lifespan(app: FastAPI):
     # setup Redis cache
     cache = init_cache()
     app.state.cache: redis.Redis = cache
-    # setup LangChain agents with Agent Engine
+    # setup LangGraph agents with Agent Engine
     for model in SUPPORTED_MODELS:
-        agent = create_agent(model=model)
-        agents[model] = agent
+        for temperature in SUPPORTED_TEMPERATURES:
+            agent = create_agent(model=model, temperature=temperature)
+            agents[(model, temperature)] = agent
     yield
     # gracefully close Redis client
     await cache.close()
@@ -78,6 +82,7 @@ origins = [
     # "https://<YOUR_FRONTEND_SERVICE_URL>",
     "http://localhost",
     "http://localhost:8080",
+    "http://127.0.0.1:8080",
     "http://localhost:5173",
 ]
 
@@ -160,16 +165,21 @@ async def new_guess(request: Request, game_id: uuid.UUID, hint: ExtendedHint):
         logger.debug(
             f"[{hint.team} team]: Adding hint with clue '{hint.clue}' for {hint.number} to game state."
         )
-        # if model passed is not supported, default to "gemini-2.0-flash-lite"
-        if hint.model not in SUPPORTED_MODELS:
+        # if model or temperature passed is not supported, default to "gemini-2.0-flash-lite" and 0.6
+        if (
+            hint.model not in SUPPORTED_MODELS
+            or hint.temperature not in SUPPORTED_TEMPERATURES
+        ):
             logger.debug(
-                f"[{hint.team} team]: Model {hint.model} is not supported, defaulting to agent with gemini-2.0-flash-lite model."
+                f"[{hint.team} team]: Model {hint.model} or temperature {hint.temperature} is not supported, defaulting to agent with gemini-2.0-flash-lite model and temperature of 0.6."
             )
-            agent = agents["gemini-2.0-flash-lite"]
+            agent = agents[("gemini-2.0-flash-lite", 0.6)]
         else:
             # get agent from stored agents
-            agent = agents[hint.model]
-            logger.debug(f"[{hint.team} team]: Using agent with {hint.model} model.")
+            agent = agents[(hint.model, hint.temperature)]
+            logger.debug(
+                f"[{hint.team} team]: Using agent with {hint.model} model and temperature of {hint.temperature}."
+            )
 
         formatted_guess = GUESS_TEMPLATE.format(
             number=hint.number, clue=hint.clue, words=game.get_unguessed_words()
