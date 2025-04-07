@@ -30,6 +30,7 @@ class ExtendedHint(Hint):
     "Extended model for game hint, includes model config."
 
     model: str = "gemini-2.0-flash-lite"
+    temperature: float = 0.6
 
 
 class Guess(BaseModel):

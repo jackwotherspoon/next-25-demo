@@ -95,7 +95,8 @@ const AIControls: React.FC<AIControlsProps> = ({
         currentTurn,
         currentHint.clue,
         currentHint.number,
-        config.model
+        config.model,
+        config.temperature
       );
 
       const thoughtProcess = [
@@ -258,12 +259,14 @@ const AIControls: React.FC<AIControlsProps> = ({
               type="range"
               min="0"
               max="1"
-              step="0.1"
+              step="0.3"
               value={config.temperature}
               onChange={(e) =>
                 onConfigChange({
                   ...config,
-                  temperature: parseFloat(e.target.value),
+                  temperature: parseFloat(
+                    e.target.value
+                  ) as AIConfig["temperature"],
                 })
               }
               className="w-full accent-[#4285f4]"

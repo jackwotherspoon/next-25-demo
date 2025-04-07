@@ -198,7 +198,8 @@ export async function requestAIGuess(
   team: TeamType,
   hint: string,
   number: number,
-  model: string
+  model: string,
+  temperature: number
 ): Promise<AIGuessResponse> {
   if (!gameId) throw new Error("Game ID is required");
   if (!hint) throw new Error("Hint is required");
@@ -217,6 +218,7 @@ export async function requestAIGuess(
         clue: hint,
         number,
         model,
+        temperature,
       }),
     }
   );
