@@ -1,7 +1,7 @@
-export type CardType = 'yellow' | 'green' | 'neutral' | 'assassin';
-export type TeamType = 'orange' | 'green';
-export type TileColor = 'orange' | 'green' | 'beige' | 'red';
-export type GameTheme = 'regular' | 'easter' | 'christmas' | 'technology';
+export type CardType = "yellow" | "green" | "neutral" | "assassin";
+export type TeamType = "orange" | "green";
+export type TileColor = "orange" | "green" | "beige" | "red";
+export type GameTheme = "regular" | "easter" | "christmas" | "technology";
 
 export interface Hint {
   team: string;
@@ -61,7 +61,7 @@ export interface Card {
 }
 
 export interface AIConfig {
-  model: 'gemini-1.5-pro' | 'gemini-1.5-flash-002' | 'gemini-2.0-flash-lite-001';
+  model: "gemini-1.5-pro" | "gemini-2.0-flash" | "gemini-2.0-flash-lite";
   temperature: number;
   use_memory: boolean;
   hint: {
@@ -73,7 +73,7 @@ export interface AIConfig {
 
 export interface GameHistory {
   moves: Array<{
-    type: 'hint' | 'guess';
+    type: "hint" | "guess";
     team: TeamType;
     word: string;
     timestamp: string;

@@ -1,6 +1,19 @@
-import { GameResponse, GameState, GameHistory, Hint, AIHintResponse, AIGuessResponse, TeamType, AIConfig, Card, CardType, Game, Tile, GameTheme } from '../types';
-import { WORD_LIST } from '../data/words';
-import { GoogleAuth } from 'google-auth-library';
+import {
+  GameResponse,
+  GameState,
+  GameHistory,
+  Hint,
+  AIHintResponse,
+  AIGuessResponse,
+  TeamType,
+  AIConfig,
+  Card,
+  CardType,
+  Game,
+  Tile,
+  GameTheme,
+} from "../types";
+import { WORD_LIST } from "../data/words";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const TIMEOUT_MS = 5000; // 5 seconds timeout
@@ -11,64 +24,25 @@ interface RequestOptions extends RequestInit {
   retries?: number;
 }
 
-// Initialize Google Auth
-const auth = new GoogleAuth();
-let authClient: any = null;
-let useAuthClient = true;
-
-async function getAuthClient() {
-  if (!useAuthClient) return null;
-  
-  if (!authClient) {
-    try {
-      authClient = await auth.getIdTokenClient(API_BASE_URL);
-    } catch (error) {
-      console.warn('Failed to initialize auth client, falling back to unauthenticated requests:', error);
-      useAuthClient = false;
-      return null;
-    }
-  }
-  return authClient;
-}
-
-async function fetchWithTimeout(url: string, options: RequestOptions = {}): Promise<Response> {
-  const { timeout = TIMEOUT_MS, retries = MAX_RETRIES, ...fetchOptions } = options;
+async function fetchWithTimeout(
+  url: string,
+  options: RequestOptions = {}
+): Promise<Response> {
+  const {
+    timeout = TIMEOUT_MS,
+    retries = MAX_RETRIES,
+    ...fetchOptions
+  } = options;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    // Try to get the auth client
-    const client = await getAuthClient();
-    
-    if (client) {
-      // Make the authenticated request
-      try {
-        const response = await client.request({
-          url,
-          ...fetchOptions,
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        // Convert the response to match the fetch API response format
-        return new Response(JSON.stringify(response.data), {
-          status: response.status,
-          headers: response.headers
-        });
-      } catch (authError) {
-        console.warn('Authenticated request failed, falling back to unauthenticated request:', authError);
-        useAuthClient = false;
-      }
-    }
-
-    // Fallback to unauthenticated request
     const response = await fetch(url, {
       ...fetchOptions,
-      signal: controller.signal
+      signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
     return response;
   } catch (error) {
@@ -97,84 +71,93 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export function mapTileColorToCardType(color: string): CardType {
   switch (color) {
-    case 'orange': return 'yellow';
-    case 'green': return 'green';
-    case 'red': return 'assassin';
-    default: return 'neutral';
+    case "orange":
+      return "yellow";
+    case "green":
+      return "green";
+    case "red":
+      return "assassin";
+    default:
+      return "neutral";
   }
 }
 
-export async function createNewGame(theme: GameTheme = 'regular'): Promise<GameResponse> {
+export async function createNewGame(
+  theme: GameTheme = "regular"
+): Promise<GameResponse> {
   try {
     const url = new URL(`${API_BASE_URL}/game`);
-    url.searchParams.append('theme', theme);
-    
+    url.searchParams.append("theme", theme);
+
     const response = await fetchWithTimeout(url.toString(), {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
     });
-    
+
     return handleResponse<GameResponse>(response);
   } catch (error) {
-    console.error('Failed to create new game:', error);
+    console.error("Failed to create new game:", error);
     throw error;
   }
 }
 
 export async function getGameState(gameId: string): Promise<GameState> {
-  if (!gameId) throw new Error('Game ID is required');
-  
+  if (!gameId) throw new Error("Game ID is required");
+
   const response = await fetchWithTimeout(`${API_BASE_URL}/game/${gameId}`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Accept': 'application/json'
-    }
+      Accept: "application/json",
+    },
   });
   return handleResponse<GameState>(response);
 }
 
 export async function updateGameState(
-  gameId: string, 
+  gameId: string,
   update: Partial<Game>
 ): Promise<GameState> {
-  if (!gameId) throw new Error('Game ID is required');
-  if (!update) throw new Error('Update data is required');
+  if (!gameId) throw new Error("Game ID is required");
+  if (!update) throw new Error("Update data is required");
 
   const response = await fetchWithTimeout(`${API_BASE_URL}/game/${gameId}`, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
+      "Content-Type": "application/json",
+      Accept: "application/json",
     },
-    body: JSON.stringify(update)
+    body: JSON.stringify(update),
   });
   return handleResponse<GameState>(response);
 }
 
 export async function deleteGame(gameId: string): Promise<void> {
-  if (!gameId) throw new Error('Game ID is required');
+  if (!gameId) throw new Error("Game ID is required");
 
   const response = await fetchWithTimeout(`${API_BASE_URL}/game/${gameId}`, {
-    method: 'DELETE'
+    method: "DELETE",
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to delete game: ${response.status}`);
   }
 }
 
 export async function getGameHistory(gameId: string): Promise<GameHistory> {
-  if (!gameId) throw new Error('Game ID is required');
+  if (!gameId) throw new Error("Game ID is required");
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/game/${gameId}/history`, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json'
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/game/${gameId}/history`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
     }
-  });
+  );
   return handleResponse<GameHistory>(response);
 }
 
@@ -184,12 +167,12 @@ export async function submitHint(
   hint: string,
   number: number
 ): Promise<GameState> {
-  if (!gameId) throw new Error('Game ID is required');
-  if (!hint) throw new Error('Hint is required');
-  if (number < 0) throw new Error('Number must be positive');
+  if (!gameId) throw new Error("Game ID is required");
+  if (!hint) throw new Error("Hint is required");
+  if (number < 0) throw new Error("Number must be positive");
 
   const update: Partial<Game> = {
-    hints: [{ team, clue: hint, number }]
+    hints: [{ team, clue: hint, number }],
   };
 
   return updateGameState(gameId, update);
@@ -200,11 +183,11 @@ export async function submitGuess(
   team: TeamType,
   guess: string
 ): Promise<GameState> {
-  if (!gameId) throw new Error('Game ID is required');
-  if (!guess) throw new Error('Guess is required');
+  if (!gameId) throw new Error("Game ID is required");
+  if (!guess) throw new Error("Guess is required");
 
   const update: Partial<Game> = {
-    guesses: [{ team, word: guess }]
+    guesses: [{ team, word: guess }],
   };
 
   return updateGameState(gameId, update);
@@ -217,23 +200,26 @@ export async function requestAIGuess(
   number: number,
   model: string
 ): Promise<AIGuessResponse> {
-  if (!gameId) throw new Error('Game ID is required');
-  if (!hint) throw new Error('Hint is required');
-  if (number <= 0) throw new Error('Number must be positive');
+  if (!gameId) throw new Error("Game ID is required");
+  if (!hint) throw new Error("Hint is required");
+  if (number <= 0) throw new Error("Number must be positive");
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/game/${gameId}/guess`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({
-      team,
-      clue: hint,
-      number,
-      model
-    })
-  });
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/game/${gameId}/guess`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        team,
+        clue: hint,
+        number,
+        model,
+      }),
+    }
+  );
   return handleResponse<AIGuessResponse>(response);
 }
 
@@ -241,15 +227,18 @@ export async function requestAIHint(
   gameId: string,
   team: TeamType
 ): Promise<AIHintResponse> {
-  if (!gameId) throw new Error('Game ID is required');
+  if (!gameId) throw new Error("Game ID is required");
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/game/${gameId}/ai/hint`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({ team })
-  });
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/game/${gameId}/ai/hint`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ team }),
+    }
+  );
   return handleResponse<AIHintResponse>(response);
 }
