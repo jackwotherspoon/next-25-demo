@@ -43,7 +43,7 @@ class Guess(BaseModel):
 class Tile(BaseModel):
     """Model for individual game tile."""
 
-    id: uuid.UUID = uuid.uuid4()  # tile id
+    id: uuid.UUID  # tile id
     guessed: bool = False  # True if tile has been guessed, False otherwise
     word: str  # word on the tile
     color: str  # color of the tile
@@ -63,24 +63,24 @@ def generate_tiles(words: list[str]) -> dict[str, Tile]:
     orange = words[:9]
     # generate tiles for orange team
     for word in orange:
-        tiles[word] = Tile(word=word, color="orange")
+        tiles[word] = Tile(id=uuid.uuid4(), word=word, color="orange")
 
     # 8 words for green team
     green = words[9:17]
     # generate tiles for green team
     for word in green:
-        tiles[word] = Tile(word=word, color="green")
+        tiles[word] = Tile(id=uuid.uuid4(), word=word, color="green")
 
     # 7 neutral words (beige)
     beige = words[17:24]
     # generate neutral tiles
     for word in beige:
-        tiles[word] = Tile(word=word, color="beige")
+        tiles[word] = Tile(id=uuid.uuid4(), word=word, color="beige")
 
     # 1 "game ending" word (red)
     red = words[-1]
     # generate single "game ending" tile
-    tiles[red] = Tile(word=red, color="red")
+    tiles[red] = Tile(id=uuid.uuid4(), word=red, color="red")
 
     return tiles
 
@@ -88,7 +88,7 @@ def generate_tiles(words: list[str]) -> dict[str, Tile]:
 class Game(BaseModel):
     """Model for game board."""
 
-    id: uuid.UUID = uuid.uuid4()  # game id
+    id: uuid.UUID  # game id
     words: list[str] = []  # words for game board
     tiles: dict[str, Tile] = {}  # word --> tile info
     hints: list[Hint] = []  # list of game hints given
@@ -96,7 +96,7 @@ class Game(BaseModel):
 
     @classmethod
     async def create(cls, pool: asyncpg.Pool, theme: str):
-        self = cls()
+        self = cls(id=uuid.uuid4())
         async with pool.acquire() as conn:
             rows = await conn.fetch(
                 f'SELECT "word" FROM "{theme}" ORDER BY RANDOM() LIMIT 25;'
