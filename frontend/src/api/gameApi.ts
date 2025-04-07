@@ -167,7 +167,6 @@ export async function submitHint(
   hint: string,
   number: number
 ): Promise<GameState> {
-  console.log("Submitting Hint!");
   if (!gameId) throw new Error("Game ID is required");
   if (!hint) throw new Error("Hint is required");
   if (number < 0) throw new Error("Number must be positive");
@@ -184,7 +183,6 @@ export async function submitGuess(
   team: TeamType,
   guess: string
 ): Promise<GameState> {
-  console.log("Submitting Guess!");
   if (!gameId) throw new Error("Game ID is required");
   if (!guess) throw new Error("Guess is required");
 
