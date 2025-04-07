@@ -46,7 +46,6 @@ function App() {
   const [aiConfig, setAIConfig] = useState<AIConfig>({
     model: "gemini-1.5-pro",
     temperature: 0.6,
-    use_memory: true,
     hint: {
       word: "",
       number: 0,

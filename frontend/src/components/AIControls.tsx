@@ -348,20 +348,6 @@ const AIControls: React.FC<AIControlsProps> = ({
               Submit Hint
             </button>
           </form>
-
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={config.use_memory}
-              onChange={(e) =>
-                onConfigChange({ ...config, use_memory: e.target.checked })
-              }
-              className={`rounded ${getInputBgColor()} border-[#4285f4] text-[#4285f4] focus:ring-[#4285f4] focus:ring-offset-0`}
-            />
-            <label className={`text-sm font-medium ${getLabelColor()}`}>
-              Enable Memory
-            </label>
-          </div>
         </div>
       </div>
 
